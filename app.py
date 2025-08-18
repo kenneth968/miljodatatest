@@ -19,9 +19,12 @@ from src.utils import robust_z_scores
 
 
 def main():
-    st.set_page_config(page_title="Student Housing Energy", layout="centered")
+    st.set_page_config(page_title="Studentbolig Energi", layout="centered")
 
     buildings, energy, occupancy, weather = load_data()
+
+    granularity_labels = ["Dag", "Måned", "År"]
+    granularity_map = dict(zip(granularity_labels, ["Day", "Month", "Year"]))
 
     with st.container():
         c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 2])
@@ -31,14 +34,19 @@ def main():
             st.session_state.city = "Gjøvik"
         if c3.button("Ålesund", use_container_width=True):
             st.session_state.city = "Ålesund"
-        st.session_state.granularity = c4.radio(
-            "Detaljnivå", ["Dag", "Måned", "År"],
-            index=["Day", "Month", "Year"].index(st.session_state.granularity),
-            horizontal=True
+
+        current_label = {v: k for k, v in granularity_map.items()}[st.session_state.granularity]
+        chosen_label = c4.radio(
+            "Detaljnivå",
+            granularity_labels,
+            index=granularity_labels.index(current_label),
+            horizontal=True,
         )
+        st.session_state.granularity = granularity_map[chosen_label]
+
         st.session_state.period = c5.date_input(
-            "Period", value=st.session_state.period,
-            help="Pick start and end dates"
+            "Periode", value=st.session_state.period,
+            help="Velg start- og sluttdato",
         )
 
     st.session_state.basemap = "Mapbox — Streets v12"
@@ -68,13 +76,32 @@ def main():
         use_container_width=True
     )
 
-    st.subheader(f"Energy vs HDD — {city} ({st.session_state.granularity})")
+    granularity_label = {v: k for k, v in granularity_map.items()}[st.session_state.granularity]
+    st.subheader(f"Energi mot graddager (HDD) — {city} ({granularity_label})")
     ts_city = edf.groupby("date", as_index=False)[["kwh", "hdd_17c"]].sum().sort_values("date")
     st.line_chart(ts_city.set_index("date"), use_container_width=True)
 
-    st.subheader("Top anomalies (by robust z-score of residuals)")
+    st.subheader("Største avvik (robust z-score)")
     top_idx = gdf["z_score"].abs().nlargest(10).index
-    top = gdf.loc[top_idx, ["date", "building_id", "name", "kwh", "expected_kwh", "kwh_per_m2", "residual", "z_score"]]
+    top = gdf.loc[top_idx, [
+        "date",
+        "building_id",
+        "name",
+        "kwh",
+        "expected_kwh",
+        "kwh_per_m2",
+        "residual",
+        "z_score",
+    ]].rename(columns={
+        "date": "Dato",
+        "building_id": "Bygg-ID",
+        "name": "Navn",
+        "kwh": "kWh",
+        "expected_kwh": "Forventet kWh",
+        "kwh_per_m2": "kWh/m²",
+        "residual": "Avvik (kWh)",
+        "z_score": "Robust z-score",
+    })
     st.dataframe(top, use_container_width=True)
 
 
