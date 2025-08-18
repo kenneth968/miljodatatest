@@ -32,7 +32,7 @@ def main():
         if c3.button("Ålesund", use_container_width=True):
             st.session_state.city = "Ålesund"
         st.session_state.granularity = c4.radio(
-            "Granularity", ["Day", "Month", "Year"],
+            "Detaljnivå", ["Dag", "Måned", "År"],
             index=["Day", "Month", "Year"].index(st.session_state.granularity),
             horizontal=True
         )
