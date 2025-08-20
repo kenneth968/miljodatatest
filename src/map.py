@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import pydeck as pdk
 from src.constants import BASEMAP_CONFIGS, MAPBOX_TOKEN
 
@@ -23,6 +22,7 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice):
         .fillna(0)
         .clip(-3, 3)
     )
+
     bdf = bdf.assign(
         kwh=gdf.groupby("building_id")["kwh"].sum().reindex(bdf["building_id"]).values,
         total_HE=gdf.groupby("building_id")["total_HE"].first().reindex(bdf["building_id"]).values,
@@ -31,24 +31,49 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice):
         radius=(bdf["area_m2"] / 5).clip(150, 800),
     )
 
+    # Optional override for radius based on total_HE
+    bdf["radius"] = (np.sqrt(bdf["total_HE"].fillna(0)) * 20).clip(100, 1000)
+    bdf["color"] = bdf["z_color"]
+
     view_state = pdk.ViewState(
-        latitude=view["lat"], longitude=view["lon"], zoom=view["zoom"], pitch=45
+        latitude=view["lat"],
+        longitude=view["lon"],
+        zoom=view["zoom"],
+        pitch=45
     )
-    points_layer = pdk.Layer(
+
+    column_layer = pdk.Layer(
+        "ColumnLayer",
+        data=bdf,
+        get_position="[lon, lat]",
+        get_elevation="kwh",
+        elevation_scale=0.01,
+        radius="radius",
+        get_fill_color="color",
+        pickable=True,
+        auto_highlight=True,
+    )
+
+    scatter_layer = pdk.Layer(
         "ScatterplotLayer",
         data=bdf,
         get_position="[lon, lat]",
         get_radius="radius",
-        get_fill_color="z_color",
-        pickable=True,
+        get_fill_color="color",
     )
 
     tooltip = {
-        "html": "<b>{name}</b><br/>kWh: {kwh:.0f}<br/>Students: {total_HE}",
+        "html": (
+            "<b>{name}</b><br/>"
+            "Power: {kwh:.0f} kWh<br/>"
+            "Students: {total_HE}<br/>"
+            "Area: {area_m2:.0f} m²"
+        ),
         "style": {"color": "white"},
     }
 
     config = BASEMAP_CONFIGS.get(basemap_choice, BASEMAP_CONFIGS["OpenStreetMap (no token)"])
+
     if config["provider"] == "osm":
         osm_layer = pdk.Layer(
             "TileLayer",
@@ -59,10 +84,14 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice):
             opacity=1.0,
             pickable=False,
         )
-        return pdk.Deck(layers=[osm_layer, points_layer], initial_view_state=view_state, tooltip=tooltip)
+        return pdk.Deck(
+            layers=[osm_layer, column_layer, scatter_layer],
+            initial_view_state=view_state,
+            tooltip=tooltip,
+        )
     elif config["provider"] == "carto":
         return pdk.Deck(
-            layers=[points_layer],
+            layers=[column_layer, scatter_layer],
             initial_view_state=view_state,
             map_provider="carto",
             map_style=config["style"],
@@ -70,7 +99,7 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice):
         )
     else:
         kwargs = dict(
-            layers=[points_layer],
+            layers=[column_layer, scatter_layer],
             initial_view_state=view_state,
             map_provider="mapbox",
             map_style=config["style"],
