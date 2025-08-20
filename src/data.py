@@ -79,11 +79,16 @@ def _load_synthetic() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Data
 # ---------------------------------------------------------------------------
 
 def _load_from_csv(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Load project and weather data from CSV files."""
+    """Load project, weather and energy data from CSV files."""
+
     static_path = data_dir / "static_data.csv"
     temp_path = data_dir / "temperature_data.csv"
+    energy_path = data_dir / "Electricity_data.csv"
 
-    static_df = pd.read_csv(static_path)
+    # --- Static project information ---------------------------------------
+    static_df = pd.read_csv(
+        static_path, sep=";", encoding="utf-8-sig", decimal=","
+    )
     buildings = static_df.rename(
         columns={
             "project_id": "building_id",
@@ -93,6 +98,9 @@ def _load_from_csv(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
         }
     )
     buildings["building_id"] = buildings["building_id"].astype(str)
+    buildings["name"] = buildings["name"].str.strip()
+    for col in ["lat", "lon"]:
+        buildings[col] = pd.to_numeric(buildings[col], errors="coerce")
     buildings = buildings[
         [
             "building_id",
@@ -109,33 +117,91 @@ def _load_from_csv(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
         columns={"capacity_students": "total_HE"}
     )
 
-    weather = pd.read_csv(temp_path, parse_dates=["Time"], dayfirst=True)
-    weather = weather.rename(
-        columns={"City": "city", "Time": "date", "Temperature": "temp_mean_c"}
+    # --- Weather data -----------------------------------------------------
+    weather_raw = pd.read_csv(
+        temp_path, sep=";", encoding="utf-8-sig", decimal=","
     )
+    month_map = {
+        "jan": "Jan",
+        "feb": "Feb",
+        "mar": "Mar",
+        "apr": "Apr",
+        "mai": "May",
+        "jun": "Jun",
+        "jul": "Jul",
+        "aug": "Aug",
+        "sep": "Sep",
+        "okt": "Oct",
+        "nov": "Nov",
+        "des": "Dec",
+    }
+
+    def _parse_time(val: str) -> pd.Timestamp:
+        m, y = val.split(".")
+        m_eng = month_map.get(m.lower(), m)
+        return pd.to_datetime(f"{m_eng} {y}", format="%b %y")
+
+    weather = weather_raw.rename(
+        columns={"City": "city", "Time": "time", "Temperature": "temp_mean_c"}
+    )
+    weather["date"] = weather["time"].apply(_parse_time)
     weather["days_in_month"] = weather["date"].dt.days_in_month
     weather["hdd_17c"] = (
         (17 - weather["temp_mean_c"]).clip(lower=0) * weather["days_in_month"]
     )
+    weather = weather[["city", "date", "temp_mean_c", "hdd_17c"]]
 
-    # Dummy monthly energy data based on static attributes and weather
-    energy_rows = []
-    for _, wrow in weather.iterrows():
-        for _, b in buildings.iterrows():
-            base = float(
-                np.clip(b["area_m2"] / 10, 150, 900) * wrow["days_in_month"]
-            )
-            kwh = float(base + 30 * wrow["hdd_17c"] + 0.6 * b["capacity_students"])
-            energy_rows.append(
-                {
-                    "date": wrow["date"],
-                    "building_id": b["building_id"],
-                    "kwh": kwh,
-                }
-            )
-    energy = pd.DataFrame(energy_rows)
+    # --- Energy usage -----------------------------------------------------
+    energy_raw = pd.read_csv(
+        energy_path,
+        sep=";",
+        encoding="utf-8-sig",
+        decimal=",",
+        thousands=" ",
+    )
+    energy_raw.columns = [c.strip() for c in energy_raw.columns]
+    energy_raw["project_name"] = energy_raw["project_name"].str.strip()
+    energy_raw["City"] = energy_raw["City"].str.title().str.strip()
 
-    return buildings, energy, total_he, weather.drop(columns=["days_in_month"])
+    month_cols = [
+        "Jan_KwH",
+        "Feb_KwH",
+        "Mar_KwH",
+        "Apr__KwH",
+        "may__KwH",
+        "Jun_KwH",
+        "Jul_KwH",
+        "Aug_KwH",
+        "Sep_KwH",
+        "Oct_KwH",
+        "Nov_KwH",
+        "Dec_KwH",
+    ]
+    month_numbers = {col: i + 1 for i, col in enumerate(month_cols)}
+
+    energy = (
+        energy_raw.melt(
+            id_vars=["project_name", "City", "Year"],
+            value_vars=month_cols,
+            var_name="month",
+            value_name="kwh",
+        )
+        .dropna(subset=["kwh"])
+        .assign(month=lambda x: x["month"].map(month_numbers))
+    )
+    energy["date"] = pd.to_datetime(
+        dict(year=energy["Year"], month=energy["month"], day=1)
+    )
+    energy = energy.rename(columns={"project_name": "name", "City": "city"})
+    energy = energy.merge(
+        buildings[["building_id", "name", "city"]],
+        on=["name", "city"],
+        how="left",
+    )
+    energy = energy.dropna(subset=["building_id"])
+    energy = energy[["date", "building_id", "kwh"]]
+
+    return buildings, energy, total_he, weather
 
 
 # ---------------------------------------------------------------------------
