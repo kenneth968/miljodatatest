@@ -5,13 +5,12 @@ from __future__ import annotations
 
 import os
 from datetime import date
-from typing import Tuple
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.constants import CITY_VIEWS, BASEMAP_CONFIGS, MAPBOX_TOKEN
+from src.constants import CITY_VIEWS
 from src.data import load_data, aggregate_data
 from src.kpis import compute_kpis
 from src.map import build_energy_map
@@ -24,11 +23,8 @@ def main():
     # Load real data from CSV; fall back to synthetic if files are missing.
     buildings, energy, total_he, weather = load_data(use_csv=True)
 
-    granularity_labels = ["Måned", "År"]
-    granularity_map = dict(zip(granularity_labels, ["Month", "Year"]))
-
     with st.container():
-        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 2])
+        c1, c2, c3 = st.columns([1, 1, 1])
         if c1.button("Trondheim", use_container_width=True):
             st.session_state.city = "Trondheim"
         if c2.button("Gjøvik", use_container_width=True):
@@ -36,21 +32,35 @@ def main():
         if c3.button("Ålesund", use_container_width=True):
             st.session_state.city = "Ålesund"
 
-        current_label = {v: k for k, v in granularity_map.items()}[st.session_state.granularity]
-        chosen_label = c4.radio(
-            "Detaljnivå",
-            granularity_labels,
-            index=granularity_labels.index(current_label),
-            horizontal=True,
-        )
-        st.session_state.granularity = granularity_map[chosen_label]
-
-        st.session_state.period = c5.date_input(
-            "Periode", value=st.session_state.period,
-            help="Velg start- og sluttdato",
-        )
-
     st.session_state.basemap = "Mapbox — Streets v12"
+
+    with st.sidebar:
+        metric_label = st.radio(
+            "Kolonnehøyde",
+            ["Total energi", "kWh per student", "kWh per m²"],
+            index=0,
+        )
+        filter_mode = st.radio(
+            "Filter",
+            ["År", "Måneder", "Måned over år"],
+            index=0,
+        )
+        if filter_mode == "År":
+            year = st.selectbox("År", [2022, 2023, 2024, 2025], index=3)
+            start = pd.Timestamp(year=year, month=1, day=1)
+            end = pd.Timestamp(year=year, month=12, day=31)
+        elif filter_mode == "Måneder":
+            months = pd.date_range("2022-01-01", "2025-12-01", freq="MS")
+            start = st.selectbox("Start", months, index=len(months) - 12)
+            end = st.selectbox("Slutt", months, index=len(months) - 1)
+            if start > end:
+                start, end = end, start
+        else:
+            month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+            month = st.selectbox("Måned", list(range(1, 13)), format_func=lambda x: month_names[x - 1])
+            years = st.multiselect("År", [2022, 2023, 2024, 2025], default=[2025])
+            if not years:
+                years = [2025]
 
     city = st.session_state.city
     view = CITY_VIEWS[city]
@@ -62,22 +72,26 @@ def main():
               .merge(weather.query("city == @city"), on="date")
     )
 
-    period_val = st.session_state.period
-    if isinstance(period_val, tuple) and len(period_val) == 2:
-        start, end = period_val
+    if filter_mode == "År" or filter_mode == "Måneder":
         edf = edf[(edf["date"] >= pd.to_datetime(start)) & (edf["date"] <= pd.to_datetime(end))]
-
-    gdf = aggregate_data(edf.copy(), bdf, st.session_state.granularity)
+    else:
+        edf = edf[(edf["date"].dt.month == month) & (edf["date"].dt.year.isin(years))]
+    gdf = aggregate_data(edf.copy(), bdf, "Month")
 
     compute_kpis(edf, gdf)
 
+    metric_map = {
+        "Total energi": "kwh",
+        "kWh per student": "kwh_per_student",
+        "kWh per m²": "kwh_per_m2",
+    }
+
     st.pydeck_chart(
-        build_energy_map(gdf, bdf, city, view, st.session_state.basemap),
-        use_container_width=True
+        build_energy_map(gdf, bdf, city, view, st.session_state.basemap, metric_map[metric_label]),
+        use_container_width=True,
     )
 
-    granularity_label = {v: k for k, v in granularity_map.items()}[st.session_state.granularity]
-    st.subheader(f"Energi mot graddager (HDD) — {city} ({granularity_label})")
+    st.subheader(f"Energi mot graddager (HDD) — {city}")
     ts_city = edf.groupby("date", as_index=False)[["kwh", "hdd_17c"]].sum().sort_values("date")
     st.line_chart(ts_city.set_index("date"), use_container_width=True)
 
@@ -108,10 +122,6 @@ def main():
 if __name__ == "__main__":
     if "city" not in st.session_state:
         st.session_state.city = "Trondheim"
-    if "granularity" not in st.session_state:
-        st.session_state.granularity = "Month"
-    if "period" not in st.session_state:
-        st.session_state.period = (date.today().replace(year=date.today().year - 1), date.today())
     if "basemap" not in st.session_state:
         st.session_state.basemap = "Mapbox — Custom (your style)"
 

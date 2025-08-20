@@ -15,7 +15,7 @@ def z_to_color(z: float) -> list[int]:
     return [200, 200, 200, 200]
 
 
-def build_energy_map(gdf, bdf, city, view, basemap_choice):
+def build_energy_map(gdf, bdf, city, view, basemap_choice, metric: str = "kwh"):
     zs = (
         gdf.groupby("building_id")["z_score"].mean()
         .reindex(bdf["building_id"])
@@ -27,9 +27,18 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice):
         kwh=gdf.groupby("building_id")["kwh"].sum().reindex(bdf["building_id"]).values,
         total_HE=gdf.groupby("building_id")["total_HE"].first().reindex(bdf["building_id"]).values,
         kwh_per_m2=gdf.groupby("building_id")["kwh_per_m2"].mean().reindex(bdf["building_id"]).values,
+        kwh_per_student=gdf.groupby("building_id")["kwh_per_student"].mean().reindex(bdf["building_id"]).values,
         z_color=[z_to_color(z) for z in zs.values],
         radius=(bdf["area_m2"] / 5).clip(150, 800),
     )
+
+    metric_map = {
+        "kwh": "kwh",
+        "kwh_per_student": "kwh_per_student",
+        "kwh_per_m2": "kwh_per_m2",
+    }
+    value_field = metric_map.get(metric, "kwh")
+    bdf["value"] = bdf[value_field]
 
     # Optional override for radius based on total_HE
     bdf["radius"] = (np.sqrt(bdf["total_HE"].fillna(0)) * 20).clip(100, 1000)
@@ -44,9 +53,9 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice):
 
     column_layer = pdk.Layer(
         "ColumnLayer",
-        data=bdf,
+        data=bdf.dropna(subset=["value"]),
         get_position="[lon, lat]",
-        get_elevation="kwh",
+        get_elevation="value",
         elevation_scale=0.01,
         radius="radius",
         get_fill_color="color",
@@ -56,7 +65,7 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice):
 
     scatter_layer = pdk.Layer(
         "ScatterplotLayer",
-        data=bdf,
+        data=bdf.dropna(subset=["value"]),
         get_position="[lon, lat]",
         get_radius="radius",
         get_fill_color="color",
@@ -66,6 +75,8 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice):
         "html": (
             "<b>{name}</b><br/>"
             "Power: {kwh:.0f} kWh<br/>"
+            "kWh/student: {kwh_per_student:.2f}<br/>"
+            "kWh/m²: {kwh_per_m2:.2f}<br/>"
             "Students: {total_HE}<br/>"
             "Area: {area_m2:.0f} m²"
         ),
