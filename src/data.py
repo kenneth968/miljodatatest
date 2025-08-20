@@ -244,6 +244,7 @@ def aggregate_data(edf: pd.DataFrame, bdf: pd.DataFrame, granularity: str) -> pd
     out["expected_kwh"] = 30 * out["hdd_17c"] + 0.5 * out["total_HE"]
     out["residual"] = out["kwh"] - out["expected_kwh"]
     out["kwh_per_m2"] = out["kwh"] / out["area_m2"].replace(0, np.nan)
+    out["kwh_per_student"] = out["kwh"] / out["total_HE"].replace(0, np.nan)
     from src.utils import robust_z_scores
     out["z_score"] = robust_z_scores(out["residual"].to_numpy())
     return out
