@@ -21,10 +21,11 @@ from src.utils import robust_z_scores
 def main():
     st.set_page_config(page_title="Studentbolig Energi", layout="centered")
 
-    buildings, energy, occupancy, weather = load_data()
+    # Load real data from CSV; fall back to synthetic if files are missing.
+    buildings, energy, total_he, weather = load_data(use_csv=True)
 
-    granularity_labels = ["Dag", "Måned", "År"]
-    granularity_map = dict(zip(granularity_labels, ["Day", "Month", "Year"]))
+    granularity_labels = ["Måned", "År"]
+    granularity_map = dict(zip(granularity_labels, ["Month", "Year"]))
 
     with st.container():
         c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 2])
@@ -50,16 +51,15 @@ def main():
         )
 
     st.session_state.basemap = "Mapbox — Streets v12"
-    
 
     city = st.session_state.city
     view = CITY_VIEWS[city]
 
     bdf = buildings.query("city == @city").copy()
     edf = (
-        energy.merge(occupancy, on=["date", "building_id"])
-        .merge(bdf[["building_id", "area_m2", "capacity_students", "name", "lat", "lon"]], on="building_id")
-        .merge(weather.query("city == @city"), on="date")
+        energy.merge(total_he, on="building_id", how="left")
+              .merge(bdf[["building_id"]], on="building_id")
+              .merge(weather.query("city == @city"), on="date")
     )
 
     period_val = st.session_state.period
