@@ -1,53 +1,53 @@
-﻿project_type;project_id;city;project_name;year_built;lat;lon;total_HE;Total_BRA
-studentboliger;200;Trondheim;Berg studentby;2010;63.4140277;10.4173132;668;16005
-studentboliger;201;Trondheim;Frode Rinnans vei;1976;63.411917;10.4367181;204;
-studentboliger;202;Trondheim;Karinelund studentby;1985;63.41067;10.43915;112;
-studentboliger;204;Trondheim;Jakobsliveien 55;;63.4211031;10.4945864;44;
-studentboliger;205;Trondheim;Sverresgate 8;1978;63.4276772;10.3892188;23;
-studentboliger;206;Trondheim;Magnus den Godesgt;1977;63.41790439;10.3950496257;42;
-studentboliger;207;Trondheim;Klostergata 18;1981;63.42272567943219;10.396648941062422;28;
-studentboliger;208;Trondheim;Nedre Berg;1990;63.413982880029856;10.412411344758755;140;
-studentboliger;209;Trondheim;Teknobyen Studentboliger;1999;63.41645551255716;10.39824138339113;116;
-studentboliger;210;Trondheim;Nedre Singsakerslette;;63.422290285076365;10.40060664660746;531;
-studentboliger;211;Trondheim;Festningsgata 11;2001;63.430088182232744;10.414355619093563;0;
-studentboliger;212;Trondheim;Moholt studentby;1963;63.41132931724903;10.43039208939092;2805,5;
-studentboliger;215;Trondheim;Bloksberg studentby;;63.42295598208364;10.391797610378518;141;
-studentboliger;216;Trondheim;Klostergata 20;2003;63.42280427918209;10.396103954555958;22;
-studentboliger;217;Trondheim;Innherredsveien 16;1990;63.43386804915458;10.41204628339183;60;
-studentboliger;218;Trondheim;Klostergata 56 ;;63.42334647784664;10.389160883391444;63;
-studentboliger;219;Trondheim;Persaunet internasjonale boliger;1991;;;0;
-studentboliger;221;Trondheim;Lerkendal studentboliger;;63.41159331484544;10.399730983390972;612;
-studentboliger;222;Trondheim;Nedre Møllenberggate 25B;2014;63.43088734736051;10.409935341062713;16;
-studentboliger;223;Trondheim;Elgsetergate 23B;;;;35;
-studentboliger;224;Trondheim;Parkering;;;;0;
-studentboliger;225;Trondheim;Studentboliger felles;;;;0;
-studentboliger;230;Trondheim;Østersunds gate 20;;63.43739293035979;10.423625642980676;39,5;
-studentboliger;233;Trondheim;Rosenborg studentby;;63.433948615958265; 10.424062427637406;114;
-næringsareal;367;Trondheim;Frode Rinnans vei 1;;;;0;
-næringsareal;368;Trondheim;Trondheim vandrerhjem;;;;0;
-næringsareal;380;Trondheim;Senterbygget – Bregneveien 65;;;;0;
-næringsareal;381;Trondheim;Moholt 50-50 Næringsutleie;;;;0;
-næringsareal;382;Trondheim;Parkeringskjeller Moholt 50-50;;;;0;
-næringsareal;383;Trondheim;Parkeringskjeller Bloksberg;;;;0;
-næringsareal;384;Trondheim;Teknobyen Næringsareal;;;;0;
-næringsareal;385;Trondheim;Gamle barnehager;;;;0;
-næringsareal;386;Trondheim;NSS Gamle boliger;;;;0;
-næringsareal;387;Trondheim;Dragvoll idrettssenter;;;;0;
-næringsareal;388;Trondheim;Gløshaugen idrettsbygg;;;;0;
-næringsareal;390;Trondheim;Lucas;;;;0;
-næringsareal;395;Trondheim;MAL 1 Moholt;;;;0;
-studentboliger;235;Ålesund;Bøgata studenby;0;;;32;
-studentboliger;236;Ålesund;Fogdegården studentby;2011;;;89;
-studentboliger;237;Ålesund;Gåseidmarka studentby;2003;;;61;
-studentboliger;238;Ålesund;Sørnesvågen studentby;0;;;169;
-studentboliger;239;Ålesund;Sundebygget studentby;;;;84;
-næringsareal;394;Ålesund;Banken Ålesund;;;;0;
-næringsareal;396;Ålesund;Sundebygget del A (Sit);;;;0;
-næringsareal;397;Ålesund;Sundebygget HUB;;;;0;
-studentboliger;226;Gjøvik;Kallerud Studentby;0;;;339;
-studentboliger;227;Gjøvik;Nordbyen studentby;0;;;102;
-studentboliger;228;Gjøvik;Sentrum studentby;0;;;107;
-studentboliger;229;Gjøvik;Sørbyen studentby;0;;;136;
-næringsareal;391;Gjøvik;Sørbyen næringsutleie Gjøvik;;;;0;
-næringsareal;392;Gjøvik;Berghusveien 12;;;;0;
-næringsareal;393;Gjøvik;Huset Gjøvik;;;;0;
+project_type,project_id,city,project_name,year_built,lat,lon,total_HE,Total_BRA
+studentboliger,200,Trondheim,Berg studentby,2010.0,63.4140277,10.4173132,668.0,16005.0
+studentboliger,201,Trondheim,Frode Rinnans vei,1976.0,63.411917,10.4367181,204.0,4512.0
+studentboliger,202,Trondheim,Karinelund studentby,1985.0,63.41067,10.43915,112.0,2800.0
+studentboliger,204,Trondheim,Jakobsliveien 55,,63.4211031,10.4945864,44.0,1122.0
+studentboliger,205,Trondheim,Sverresgate 8,1978.0,63.4276772,10.3892188,23.0,541.0
+studentboliger,206,Trondheim,Magnus den Godesgt,1977.0,63.41790439,10.3950496257,42.0,1470.0
+studentboliger,207,Trondheim,Klostergata 18,1981.0,63.42272567943219,10.396648941062422,28.0,604.0
+studentboliger,208,Trondheim,Nedre Berg,1990.0,63.413982880029856,10.412411344758755,140.0,3528.0
+studentboliger,209,Trondheim,Teknobyen Studentboliger,1999.0,63.41645551255716,10.39824138339113,116.0,4350.0
+studentboliger,210,Trondheim,Nedre Singsakerslette,,63.422290285076365,10.40060664660746,531.0,11676.0
+studentboliger,211,Trondheim,Festningsgata 11,2001.0,63.43008818223274,10.414355619093564,0.0,
+studentboliger,212,Trondheim,Moholt studentby,1963.0,63.41132931724903,10.43039208939092,2805.5,45432.0
+studentboliger,215,Trondheim,Bloksberg studentby,,63.42295598208364,10.391797610378518,141.0,3256.0
+studentboliger,216,Trondheim,Klostergata 20,2003.0,63.42280427918209,10.396103954555958,22.0,930.0
+studentboliger,217,Trondheim,Innherredsveien 16,1990.0,63.43386804915458,10.41204628339183,60.0,
+studentboliger,218,Trondheim,Klostergata 56 ,,63.42334647784664,10.389160883391444,63.0,1355.0
+studentboliger,219,Trondheim,Persaunet internasjonale boliger,1991.0,,,0.0,
+studentboliger,221,Trondheim,Lerkendal studentboliger,,63.41159331484544,10.399730983390972,612.0,15895.0
+studentboliger,222,Trondheim,Nedre Møllenberggate 25B,2014.0,63.43088734736051,10.409935341062711,16.0,
+studentboliger,223,Trondheim,Elgsetergate 23B,,,,35.0,
+studentboliger,224,Trondheim,Parkering,,,,0.0,
+studentboliger,225,Trondheim,Studentboliger felles,,,,0.0,
+studentboliger,230,Trondheim,Østersunds gate 20,,63.43739293035979,10.423625642980676,39.5,
+studentboliger,233,Trondheim,Rosenborg studentby,,63.433948615958265,10.424062427637406,114.0,
+næringsareal,367,Trondheim,Frode Rinnans vei 1,,,,0.0,
+næringsareal,368,Trondheim,Trondheim vandrerhjem,,,,0.0,
+næringsareal,380,Trondheim,Senterbygget – Bregneveien 65,,,,0.0,
+næringsareal,381,Trondheim,Moholt 50-50 Næringsutleie,,,,0.0,
+næringsareal,382,Trondheim,Parkeringskjeller Moholt 50-50,,,,0.0,
+næringsareal,383,Trondheim,Parkeringskjeller Bloksberg,,,,0.0,
+næringsareal,384,Trondheim,Teknobyen Næringsareal,,,,0.0,
+næringsareal,385,Trondheim,Gamle barnehager,,,,0.0,
+næringsareal,386,Trondheim,NSS Gamle boliger,,,,0.0,
+næringsareal,387,Trondheim,Dragvoll idrettssenter,,,,0.0,
+næringsareal,388,Trondheim,Gløshaugen idrettsbygg,,,,0.0,
+næringsareal,390,Trondheim,Lucas,,,,0.0,
+næringsareal,395,Trondheim,MAL 1 Moholt,,,,0.0,
+studentboliger,235,Ålesund,Bøgata studenby,0.0,,,32.0,
+studentboliger,236,Ålesund,Fogdegården studentby,2011.0,,,89.0,
+studentboliger,237,Ålesund,Gåseidmarka studentby,2003.0,,,61.0,
+studentboliger,238,Ålesund,Sørnesvågen studentby,0.0,,,169.0,
+studentboliger,239,Ålesund,Sundebygget studentby,,,,84.0,
+næringsareal,394,Ålesund,Banken Ålesund,,,,0.0,
+næringsareal,396,Ålesund,Sundebygget del A (Sit),,,,0.0,
+næringsareal,397,Ålesund,Sundebygget HUB,,,,0.0,
+studentboliger,226,Gjøvik,Kallerud Studentby,0.0,,,339.0,
+studentboliger,227,Gjøvik,Nordbyen studentby,0.0,,,102.0,
+studentboliger,228,Gjøvik,Sentrum studentby,0.0,,,107.0,
+studentboliger,229,Gjøvik,Sørbyen studentby,0.0,,,136.0,
+næringsareal,391,Gjøvik,Sørbyen næringsutleie Gjøvik,,,,0.0,
+næringsareal,392,Gjøvik,Berghusveien 12,,,,0.0,
+næringsareal,393,Gjøvik,Huset Gjøvik,,,,0.0,
