@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 import altair as alt
+import pandas as pd
 import streamlit as st
 
 from src.constants import CITY_VIEWS
 from src.data import load_data, aggregate_data
 from src.kpis import compute_kpis
-from src.map import build_energy_map
+from src.map import build_energy_map, z_to_color
 
 
 def main():
@@ -130,6 +131,29 @@ def main():
             ),
             use_container_width=True,
         )
+
+        legend_z = [2, 1, 0, -1, -2]
+        legend_labels = [
+            "> 1.5",
+            "0.5 to 1.5",
+            "-0.5 to 0.5",
+            "-1.5 to -0.5",
+            "< -1.5",
+        ]
+        legend_colors = [
+            "#%02x%02x%02x" % tuple(z_to_color(z)[:3]) for z in legend_z
+        ]
+        legend_df = pd.DataFrame({"label": legend_labels, "color": legend_colors})
+        legend_chart = (
+            alt.Chart(legend_df)
+            .mark_square(size=200)
+            .encode(
+                y=alt.Y("label:N", axis=alt.Axis(title="Robust z-score"), sort=None),
+                color=alt.Color("color:N", scale=None, legend=None),
+            )
+            .properties(width=100, height=100)
+        )
+        st.altair_chart(legend_chart, use_container_width=False)
 
     st.subheader(f"Tidsserie — {st.session_state.metric_label}")
     gdf_all = aggregate_data(edf_all.copy(), bdf, "Month")
