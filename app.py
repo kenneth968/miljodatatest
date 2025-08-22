@@ -3,18 +3,12 @@
 
 from __future__ import annotations
 
-import os
-from datetime import date
-
-import numpy as np
-import pandas as pd
 import streamlit as st
 
 from src.constants import CITY_VIEWS
 from src.data import load_data, aggregate_data
 from src.kpis import compute_kpis
 from src.map import build_energy_map
-from src.utils import robust_z_scores
 
 
 def main():
@@ -34,51 +28,79 @@ def main():
 
     st.session_state.basemap = "Mapbox — Streets v12"
 
-    with st.sidebar:
-        metric_label = st.radio(
-            "Kolonnehøyde",
-            ["Total energi", "kWh per student", "kWh per m²"],
-            index=0,
-        )
-        filter_mode = st.radio(
-            "Filter",
-            ["År", "Måneder", "Måned over år"],
-            index=0,
-        )
-        if filter_mode == "År":
-            year = st.selectbox("År", [2022, 2023, 2024, 2025], index=3)
-            start = pd.Timestamp(year=year, month=1, day=1)
-            end = pd.Timestamp(year=year, month=12, day=31)
-        elif filter_mode == "Måneder":
-            months = pd.date_range("2022-01-01", "2025-12-01", freq="MS")
-            start = st.selectbox("Start", months, index=len(months) - 12)
-            end = st.selectbox("Slutt", months, index=len(months) - 1)
-            if start > end:
-                start, end = end, start
-        else:
-            month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-            month = st.selectbox("Måned", list(range(1, 13)), format_func=lambda x: month_names[x - 1])
-            years = st.multiselect("År", [2022, 2023, 2024, 2025], default=[2025])
-            if not years:
-                years = [2025]
-
     city = st.session_state.city
     view = CITY_VIEWS[city]
-
     bdf = buildings.query("city == @city").copy()
+
+    # Initialise session defaults for filters and selection
+    if "metric_label" not in st.session_state:
+        st.session_state.metric_label = "Total energi"
+    if "year" not in st.session_state:
+        st.session_state.year = 2025
+    if "month" not in st.session_state:
+        st.session_state.month = 0  # 0 => all months
+    if (
+        "selected_projects" not in st.session_state
+        or not set(st.session_state.selected_projects).issubset(set(bdf["name"]))
+    ):
+        st.session_state.selected_projects = bdf["name"].tolist()
+
+    # Filter data for the chosen time period
     edf = (
         energy.merge(total_he, on="building_id", how="left")
               .merge(bdf[["building_id"]], on="building_id")
               .merge(weather.query("city == @city"), on="date")
     )
+    edf = edf[edf["date"].dt.year == st.session_state.year]
+    if st.session_state.month != 0:
+        edf = edf[edf["date"].dt.month == st.session_state.month]
 
-    if filter_mode == "År" or filter_mode == "Måneder":
-        edf = edf[(edf["date"] >= pd.to_datetime(start)) & (edf["date"] <= pd.to_datetime(end))]
-    else:
-        edf = edf[(edf["date"].dt.month == month) & (edf["date"].dt.year.isin(years))]
     gdf = aggregate_data(edf.copy(), bdf, "Month")
 
-    compute_kpis(edf, gdf)
+    # Apply project selection
+    bdf_sel = bdf[bdf["name"].isin(st.session_state.selected_projects)].copy()
+    edf_sel = edf[edf["building_id"].isin(bdf_sel["building_id"])]
+    gdf_sel = gdf[gdf["building_id"].isin(bdf_sel["building_id"])]
+
+    compute_kpis(edf_sel, gdf_sel)
+
+    # Layout: filters on the left, map in the centre, projects on the right
+    left, map_col, right = st.columns([1, 3, 1])
+
+    with left:
+        st.session_state.metric_label = st.radio(
+            "Kolonnehøyde",
+            ["Total energi", "kWh per student", "kWh per m²"],
+            index=["Total energi", "kWh per student", "kWh per m²"].index(
+                st.session_state.metric_label
+            ),
+        )
+        st.session_state.year = st.radio(
+            "År",
+            [2022, 2023, 2024, 2025],
+            index=[2022, 2023, 2024, 2025].index(st.session_state.year),
+        )
+        month_names = [
+            "Alle",
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "Mai",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Okt",
+            "Nov",
+            "Des",
+        ]
+        st.session_state.month = st.radio(
+            "Måned",
+            list(range(13)),
+            index=st.session_state.month,
+            format_func=lambda i: month_names[i],
+        )
 
     metric_map = {
         "Total energi": "kwh",
@@ -86,18 +108,37 @@ def main():
         "kWh per m²": "kwh_per_m2",
     }
 
-    st.pydeck_chart(
-        build_energy_map(gdf, bdf, city, view, st.session_state.basemap, metric_map[metric_label]),
-        use_container_width=True,
+    with right:
+        st.session_state.selected_projects = st.multiselect(
+            "Prosjekter",
+            bdf["name"].tolist(),
+            default=st.session_state.selected_projects,
+        )
+
+    with map_col:
+        st.pydeck_chart(
+            build_energy_map(
+                gdf_sel,
+                bdf_sel,
+                city,
+                view,
+                st.session_state.basemap,
+                metric_map[st.session_state.metric_label],
+            ),
+            use_container_width=True,
+        )
+
+    st.subheader(f"Tidsserie — {st.session_state.metric_label}")
+    ts = (
+        gdf_sel.groupby("date", as_index=False)[metric_map[st.session_state.metric_label]]
+        .sum()
+        .sort_values("date")
     )
+    st.line_chart(ts.set_index("date"), use_container_width=True)
 
-    st.subheader(f"Energi mot graddager (HDD) — {city}")
-    ts_city = edf.groupby("date", as_index=False)[["kwh", "hdd_17c"]].sum().sort_values("date")
-    st.line_chart(ts_city.set_index("date"), use_container_width=True)
-
-    st.subheader("Største avvik (robust z-score)")
-    top_idx = gdf["z_score"].abs().nlargest(10).index
-    top = gdf.loc[top_idx, [
+    st.subheader("Topp tre prosjekter (robust z-score)")
+    top_idx = gdf_sel["z_score"].abs().nlargest(3).index
+    top = gdf_sel.loc[top_idx, [
         "date",
         "building_id",
         "name",
@@ -106,16 +147,18 @@ def main():
         "kwh_per_m2",
         "residual",
         "z_score",
-    ]].rename(columns={
-        "date": "Dato",
-        "building_id": "Bygg-ID",
-        "name": "Navn",
-        "kwh": "kWh",
-        "expected_kwh": "Forventet kWh",
-        "kwh_per_m2": "kWh/m²",
-        "residual": "Avvik (kWh)",
-        "z_score": "Robust z-score",
-    })
+    ]].rename(
+        columns={
+            "date": "Dato",
+            "building_id": "Bygg-ID",
+            "name": "Navn",
+            "kwh": "kWh",
+            "expected_kwh": "Forventet kWh",
+            "kwh_per_m2": "kWh/m²",
+            "residual": "Avvik (kWh)",
+            "z_score": "Robust z-score",
+        }
+    )
     st.dataframe(top, use_container_width=True)
 
 
