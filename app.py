@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import altair as alt
+import pandas as pd
 import streamlit as st
 
 from src.constants import CITY_VIEWS
@@ -44,6 +45,8 @@ def main():
         st.session_state.year = int(max(years))
     if "month" not in st.session_state:
         st.session_state.month = 0  # 0 => all months
+    if "granularity" not in st.session_state:
+        st.session_state.granularity = "Month"
     if (
         "selected_projects" not in st.session_state
         or not set(st.session_state.selected_projects).issubset(set(bdf["name"]))
@@ -61,7 +64,7 @@ def main():
     if st.session_state.month != 0:
         edf = edf[edf["date"].dt.month == st.session_state.month]
 
-    gdf = aggregate_data(edf.copy(), bdf, "Month")
+    gdf = aggregate_data(edf.copy(), bdf, st.session_state.granularity)
 
     # Apply project selection
     bdf_sel = bdf[bdf["name"].isin(st.session_state.selected_projects)].copy()
@@ -107,6 +110,11 @@ def main():
             index=st.session_state.month,
             format_func=lambda i: month_names[i],
         )
+        st.session_state.granularity = st.radio(
+            "Month/Year",
+            ["Month", "Year"],
+            index=["Month", "Year"].index(st.session_state.granularity),
+        )
 
     metric_map = {
         "Total energi": "kwh",
@@ -135,7 +143,7 @@ def main():
         )
 
     st.subheader(f"Tidsserie — {st.session_state.metric_label}")
-    gdf_all = aggregate_data(edf_all.copy(), bdf, "Month")
+    gdf_all = aggregate_data(edf_all.copy(), bdf, st.session_state.granularity)
     gdf_all_sel = gdf_all[gdf_all["building_id"].isin(bdf_sel["building_id"])]
     ts_energy = (
         gdf_all_sel.groupby("date", as_index=False)[metric_map[st.session_state.metric_label]]
@@ -143,15 +151,26 @@ def main():
         .rename(columns={metric_map[st.session_state.metric_label]: "energy"})
         .sort_values("date")
     )
-    temp_ts = weather.query("city == @city").sort_values("date")[["date", "temp_mean_c"]]
+    temp_ts = weather.query("city == @city").copy()
+    if st.session_state.granularity == "Year":
+        temp_ts = (
+            temp_ts.assign(year=temp_ts["date"].dt.year)
+                   .groupby("year", as_index=False)["temp_mean_c"].mean()
+                   .assign(date=lambda x: pd.to_datetime(x["year"].astype(str) + "-01-01"))
+                   .sort_values("date")[ ["date", "temp_mean_c"] ]
+        )
+    else:
+        temp_ts = temp_ts.sort_values("date")[ ["date", "temp_mean_c"] ]
 
-    energy_line = alt.Chart(ts_energy).mark_line(color="steelblue").encode(
-        x="date:T",
-        y=alt.Y("energy:Q", axis=alt.Axis(title=st.session_state.metric_label))
-    )
+    date_format = "%Y" if st.session_state.granularity == "Year" else "%b %Y"
+
     temp_line = alt.Chart(temp_ts).mark_line(color="orange", opacity=0.3).encode(
-        x="date:T",
+        x=alt.X("date:T", axis=alt.Axis(format=date_format)),
         y=alt.Y("temp_mean_c:Q", axis=alt.Axis(title="Temperatur (°C)"))
+    )
+    energy_line = alt.Chart(ts_energy).mark_line(color="steelblue").encode(
+        x=alt.X("date:T", axis=alt.Axis(format=date_format)),
+        y=alt.Y("energy:Q", axis=alt.Axis(title=st.session_state.metric_label))
     )
     chart = alt.layer(temp_line, energy_line).resolve_scale(y="independent")
     st.altair_chart(chart, use_container_width=True)
