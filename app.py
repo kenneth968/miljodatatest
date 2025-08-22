@@ -156,6 +156,31 @@ def main():
     chart = alt.layer(temp_line, energy_line).resolve_scale(y="independent")
     st.altair_chart(chart, use_container_width=True)
 
+    st.subheader("Klima vs energiforbruk")
+    climate_metric = st.radio(
+        "Klimavariabel",
+        ["temp_mean_c", "hdd_17c"],
+        format_func=lambda v: "Temperatur (°C)" if v == "temp_mean_c" else "HDD₁₇ (graddager)",
+    )
+    corr_df = (
+        edf_sel.groupby("date", as_index=False)
+        .agg({"kwh": "sum", "temp_mean_c": "mean", "hdd_17c": "mean"})
+    )
+    scatter = (
+        alt.Chart(corr_df)
+        .mark_circle(size=60, opacity=0.6)
+        .encode(
+            x=alt.X(
+                f"{climate_metric}:Q",
+                title="Temperatur (°C)" if climate_metric == "temp_mean_c" else "HDD₁₇ (graddager)",
+            ),
+            y=alt.Y("kwh:Q", title="kWh"),
+            tooltip=["date:T", "kwh:Q", "temp_mean_c:Q", "hdd_17c:Q"],
+        )
+    )
+    trend = scatter.transform_regression(climate_metric, "kwh").mark_line(color="firebrick")
+    st.altair_chart(scatter + trend, use_container_width=True)
+
     st.subheader("Topp tre prosjekter (robust z-score)")
     top_idx = gdf_sel["z_score"].abs().nlargest(3).index
     top = gdf_sel.loc[top_idx, [
