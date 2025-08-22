@@ -209,9 +209,20 @@ def _load_from_csv(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
 # ---------------------------------------------------------------------------
 
 @st.cache_data
-def load_data(use_csv: bool = False, data_dir: Path | str = Path("data")):
-    """Load data either from CSV files or using the synthetic fallback."""
-    data_path = Path(data_dir)
+def load_data(use_csv: bool = False, data_dir: Path | str | None = None):
+    """Load data either from CSV files or using the synthetic fallback.
+
+    Parameters
+    ----------
+    use_csv : bool, default False
+        Whether to load data from CSV files.
+    data_dir : Path | str | None, optional
+        Directory containing the CSV files. If ``None`` the function will
+        look for a ``.data`` folder first and fall back to ``data``.
+    """
+    data_path = Path(data_dir) if data_dir else Path(".data")
+    if not data_path.exists():
+        data_path = Path("data")
     if use_csv:
         return _load_from_csv(data_path)
     return _load_synthetic()
