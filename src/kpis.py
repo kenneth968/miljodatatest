@@ -69,4 +69,3 @@ def compute_kpis(edf, gdf) -> None:
         mean_temp = 17 - edf["hdd_17c"].mean()
         st.caption("Gjennomsnittlig temperatur (°C)")
         st.altair_chart(_temperature_chart(mean_temp), use_container_width=False)
-
