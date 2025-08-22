@@ -29,7 +29,7 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice, metric: str = "kwh"):
         kwh_per_m2=gdf.groupby("building_id")["kwh_per_m2"].mean().reindex(bdf["building_id"]).values,
         kwh_per_student=gdf.groupby("building_id")["kwh_per_student"].mean().reindex(bdf["building_id"]).values,
         z_color=[z_to_color(z) for z in zs.values],
-        radius=(bdf["area_m2"] / 5).clip(150, 800),
+        radius=(bdf["area_m2"] / 20).clip(25, 200),
     )
 
     metric_map = {
@@ -41,7 +41,7 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice, metric: str = "kwh"):
     bdf["value"] = bdf[value_field]
 
     # Optional override for radius based on total_HE
-    bdf["radius"] = (np.sqrt(bdf["total_HE"].fillna(0)) * 20).clip(100, 1000)
+    bdf["radius"] = (np.sqrt(bdf["total_HE"].fillna(0)) * 5).clip(30, 200)
     bdf["color"] = bdf["z_color"]
 
     view_state = pdk.ViewState(
@@ -56,19 +56,11 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice, metric: str = "kwh"):
         data=bdf.dropna(subset=["value"]),
         get_position="[lon, lat]",
         get_elevation="value",
-        elevation_scale=0.01,
+        elevation_scale=0.005,
         radius="radius",
         get_fill_color="color",
         pickable=True,
         auto_highlight=True,
-    )
-
-    scatter_layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=bdf.dropna(subset=["value"]),
-        get_position="[lon, lat]",
-        get_radius="radius",
-        get_fill_color="color",
     )
 
     tooltip = {
@@ -96,13 +88,13 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice, metric: str = "kwh"):
             pickable=False,
         )
         return pdk.Deck(
-            layers=[osm_layer, column_layer, scatter_layer],
+            layers=[osm_layer, column_layer],
             initial_view_state=view_state,
             tooltip=tooltip,
         )
     elif config["provider"] == "carto":
         return pdk.Deck(
-            layers=[column_layer, scatter_layer],
+            layers=[column_layer],
             initial_view_state=view_state,
             map_provider="carto",
             map_style=config["style"],
@@ -110,7 +102,7 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice, metric: str = "kwh"):
         )
     else:
         kwargs = dict(
-            layers=[column_layer, scatter_layer],
+            layers=[column_layer],
             initial_view_state=view_state,
             map_provider="mapbox",
             map_style=config["style"],
