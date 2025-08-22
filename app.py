@@ -12,10 +12,13 @@ from src.map import build_energy_map
 
 
 def main():
-    st.set_page_config(page_title="Studentbolig Energi", layout="centered")
+    st.set_page_config(page_title="Studentbolig Energi", layout="wide")
 
     # Load real data from CSV; fall back to synthetic if files are missing.
     buildings, energy, total_he, weather = load_data(use_csv=True)
+    # Drop projects that have no associated energy readings
+    buildings = buildings[buildings["building_id"].isin(energy["building_id"].unique())]
+    total_he = total_he[total_he["building_id"].isin(buildings["building_id"])]
 
     with st.container():
         c1, c2, c3 = st.columns([1, 1, 1])
