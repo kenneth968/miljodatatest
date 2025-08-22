@@ -52,8 +52,22 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice, metric: str = "kwh"):
     # Filter out rows with missing values needed for visualization
     bdf = bdf.dropna(subset=["value", "lon", "lat"])
 
-    # Convert to Python dicts for pydeck compatibility
-    data_records = bdf[["lon", "lat", "value", "radius", "color"]].to_dict(orient="records")
+    # Convert to Python dicts for pydeck compatibility including details for tooltips
+    data_records = bdf[
+        [
+            "lon",
+            "lat",
+            "value",
+            "radius",
+            "color",
+            "name",
+            "kwh",
+            "kwh_per_student",
+            "kwh_per_m2",
+            "total_HE",
+            "area_m2",
+        ]
+    ].to_dict(orient="records")
 
     # View
     view_state = pdk.ViewState(

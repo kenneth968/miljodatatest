@@ -35,7 +35,7 @@ def main():
     view = CITY_VIEWS[city]
     bdf = buildings.query("city == @city").copy()
 
-    # Initialise session defaults for filters and selection
+    # Initialise session defaults for filters
     if "metric_label" not in st.session_state:
         st.session_state.metric_label = "Total energi"
     if "year" not in st.session_state:
@@ -44,11 +44,6 @@ def main():
         st.session_state.month = 0  # 0 => all months
     if "granularity" not in st.session_state:
         st.session_state.granularity = "Month"
-    if (
-        "selected_projects" not in st.session_state
-        or not set(st.session_state.selected_projects).issubset(set(bdf["name"]))
-    ):
-        st.session_state.selected_projects = bdf["name"].tolist()
 
     # Build city-level datasets
     edf_all = (
@@ -63,15 +58,10 @@ def main():
 
     gdf = aggregate_data(edf.copy(), bdf, st.session_state.granularity)
 
-    # Apply project selection
-    bdf_sel = bdf[bdf["name"].isin(st.session_state.selected_projects)].copy()
-    edf_sel = edf[edf["building_id"].isin(bdf_sel["building_id"])]
-    gdf_sel = gdf[gdf["building_id"].isin(bdf_sel["building_id"])]
+    compute_kpis(edf, gdf)
 
-    compute_kpis(edf_sel, gdf_sel)
-
-    # Layout: filters on the left, map in the centre, projects on the right
-    left, map_col, right = st.columns([1, 3, 1])
+    # Layout: filters on the left and map in the centre
+    left, map_col = st.columns([1, 4])
 
     with left:
         st.session_state.metric_label = st.radio(
@@ -119,18 +109,11 @@ def main():
         "kWh per m²": "kwh_per_m2",
     }
 
-    with right:
-        st.session_state.selected_projects = st.multiselect(
-            "Prosjekter",
-            bdf["name"].tolist(),
-            default=st.session_state.selected_projects,
-        )
-
     with map_col:
         st.pydeck_chart(
             build_energy_map(
-                gdf_sel,
-                bdf_sel,
+                gdf,
+                bdf,
                 city,
                 view,
                 st.session_state.basemap,
@@ -164,9 +147,8 @@ def main():
 
     st.subheader(f"Tidsserie — {st.session_state.metric_label}")
     gdf_all = aggregate_data(edf_all.copy(), bdf, st.session_state.granularity)
-    gdf_all_sel = gdf_all[gdf_all["building_id"].isin(bdf_sel["building_id"])]
     ts_energy = (
-        gdf_all_sel.groupby("date", as_index=False)[metric_map[st.session_state.metric_label]]
+        gdf_all.groupby("date", as_index=False)[metric_map[st.session_state.metric_label]]
         .sum()
         .rename(columns={metric_map[st.session_state.metric_label]: "energy"})
         .sort_values("date")
@@ -202,7 +184,7 @@ def main():
         format_func=lambda v: "Temperatur (°C)" if v == "temp_mean_c" else "HDD₁₇ (graddager)",
     )
     corr_df = (
-        edf_sel.groupby("date", as_index=False)
+        edf.groupby("date", as_index=False)
         .agg({"kwh": "sum", "temp_mean_c": "mean", "hdd_17c": "mean"})
     )
     scatter = (
@@ -221,8 +203,8 @@ def main():
     st.altair_chart(scatter + trend, use_container_width=True)
 
     st.subheader("Topp tre prosjekter (robust z-score)")
-    top_idx = gdf_sel["z_score"].abs().nlargest(3).index
-    top = gdf_sel.loc[top_idx, [
+    top_idx = gdf["z_score"].abs().nlargest(3).index
+    top = gdf.loc[top_idx, [
         "date",
         "building_id",
         "name",
