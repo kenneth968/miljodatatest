@@ -111,3 +111,4 @@ def build_energy_map(gdf, bdf, city, view, basemap_choice, metric: str = "kwh"):
         if MAPBOX_TOKEN:
             kwargs["api_keys"] = {"mapbox": MAPBOX_TOKEN}
         return pdk.Deck(**kwargs)
+

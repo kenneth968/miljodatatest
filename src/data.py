@@ -182,9 +182,11 @@ def _load_from_csv(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
             var_name="month",
             value_name="kwh",
         )
-        .dropna(subset=["kwh"])
         .assign(month=lambda x: x["month"].map(month_numbers))
     )
+    # Ensure energy values are numeric before further calculations
+    energy["kwh"] = pd.to_numeric(energy["kwh"], errors="coerce")
+    energy = energy.dropna(subset=["kwh"])
     energy["date"] = pd.to_datetime(
         dict(year=energy["Year"], month=energy["month"], day=1)
     )
@@ -255,3 +257,4 @@ def aggregate_data(edf: pd.DataFrame, bdf: pd.DataFrame, granularity: str) -> pd
     from src.utils import robust_z_scores
     out["z_score"] = robust_z_scores(out["residual"].to_numpy())
     return out
+
