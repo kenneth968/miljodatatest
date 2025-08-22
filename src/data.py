@@ -86,9 +86,7 @@ def _load_from_csv(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
     energy_path = data_dir / "Electricity_data.csv"
 
     # --- Static project information ---------------------------------------
-    static_df = pd.read_csv(
-        static_path, sep=";", encoding="utf-8-sig", decimal=","
-    )
+    static_df = pd.read_csv(static_path, sep=",", encoding="utf-8-sig")
     buildings = static_df.rename(
         columns={
             "project_id": "building_id",
@@ -118,9 +116,7 @@ def _load_from_csv(data_dir: Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataF
     )
 
     # --- Weather data -----------------------------------------------------
-    weather_raw = pd.read_csv(
-        temp_path, sep=";", encoding="utf-8-sig", decimal=","
-    )
+    weather_raw = pd.read_csv(temp_path, sep=",", encoding="utf-8-sig")
     month_map = {
         "jan": "Jan",
         "feb": "Feb",
