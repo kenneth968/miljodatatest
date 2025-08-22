@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import altair as alt
 import streamlit as st
 
 from src.constants import CITY_VIEWS
@@ -19,6 +20,7 @@ def main():
     # Drop projects that have no associated energy readings
     buildings = buildings[buildings["building_id"].isin(energy["building_id"].unique())]
     total_he = total_he[total_he["building_id"].isin(buildings["building_id"])]
+    years = sorted(energy["date"].dt.year.unique())
 
     with st.container():
         c1, c2, c3 = st.columns([1, 1, 1])
@@ -39,7 +41,7 @@ def main():
     if "metric_label" not in st.session_state:
         st.session_state.metric_label = "Total energi"
     if "year" not in st.session_state:
-        st.session_state.year = 2025
+        st.session_state.year = int(max(years))
     if "month" not in st.session_state:
         st.session_state.month = 0  # 0 => all months
     if (
@@ -48,13 +50,14 @@ def main():
     ):
         st.session_state.selected_projects = bdf["name"].tolist()
 
-    # Filter data for the chosen time period
-    edf = (
+    # Build city-level datasets
+    edf_all = (
         energy.merge(total_he, on="building_id", how="left")
               .merge(bdf[["building_id"]], on="building_id")
               .merge(weather.query("city == @city"), on="date")
     )
-    edf = edf[edf["date"].dt.year == st.session_state.year]
+
+    edf = edf_all[edf_all["date"].dt.year == st.session_state.year]
     if st.session_state.month != 0:
         edf = edf[edf["date"].dt.month == st.session_state.month]
 
@@ -80,8 +83,8 @@ def main():
         )
         st.session_state.year = st.radio(
             "År",
-            [2022, 2023, 2024, 2025],
-            index=[2022, 2023, 2024, 2025].index(st.session_state.year),
+            years,
+            index=years.index(st.session_state.year),
         )
         month_names = [
             "Alle",
@@ -132,12 +135,26 @@ def main():
         )
 
     st.subheader(f"Tidsserie — {st.session_state.metric_label}")
-    ts = (
-        gdf_sel.groupby("date", as_index=False)[metric_map[st.session_state.metric_label]]
+    gdf_all = aggregate_data(edf_all.copy(), bdf, "Month")
+    gdf_all_sel = gdf_all[gdf_all["building_id"].isin(bdf_sel["building_id"])]
+    ts_energy = (
+        gdf_all_sel.groupby("date", as_index=False)[metric_map[st.session_state.metric_label]]
         .sum()
+        .rename(columns={metric_map[st.session_state.metric_label]: "energy"})
         .sort_values("date")
     )
-    st.line_chart(ts.set_index("date"), use_container_width=True)
+    temp_ts = weather.query("city == @city").sort_values("date")[["date", "temp_mean_c"]]
+
+    energy_line = alt.Chart(ts_energy).mark_line(color="steelblue").encode(
+        x="date:T",
+        y=alt.Y("energy:Q", axis=alt.Axis(title=st.session_state.metric_label))
+    )
+    temp_line = alt.Chart(temp_ts).mark_line(color="orange", opacity=0.3).encode(
+        x="date:T",
+        y=alt.Y("temp_mean_c:Q", axis=alt.Axis(title="Temperatur (°C)"))
+    )
+    chart = alt.layer(temp_line, energy_line).resolve_scale(y="independent")
+    st.altair_chart(chart, use_container_width=True)
 
     st.subheader("Topp tre prosjekter (robust z-score)")
     top_idx = gdf_sel["z_score"].abs().nlargest(3).index
