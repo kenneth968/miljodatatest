@@ -250,6 +250,14 @@ def aggregate_data(edf: pd.DataFrame, bdf: pd.DataFrame, granularity: str) -> pd
         on="building_id",
         how="left",
     )
+    # Ensure all numeric columns are proper numbers.  When the input data
+    # contains ``pd.NA`` or string representations of numbers, pandas can give
+    # them an ``object`` dtype which breaks arithmetic operations (e.g. when
+    # computing the residual below).  Coerce everything to floats first so that
+    # subtraction works reliably.
+    for col in ["kwh", "hdd_17c", "total_HE", "area_m2"]:
+        out[col] = pd.to_numeric(out[col], errors="coerce")
+
     out["expected_kwh"] = 30 * out["hdd_17c"] + 0.5 * out["total_HE"]
     out["residual"] = out["kwh"] - out["expected_kwh"]
     out["kwh_per_m2"] = out["kwh"] / out["area_m2"].replace(0, np.nan)
