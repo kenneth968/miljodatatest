@@ -226,6 +226,7 @@ def load_data(use_csv: bool = False, data_dir: Path | str | None = None):
     return _load_synthetic()
 
 
+@st.cache_data
 def aggregate_data(edf: pd.DataFrame, bdf: pd.DataFrame, granularity: str) -> pd.DataFrame:
     if granularity == "Month":
         out = (

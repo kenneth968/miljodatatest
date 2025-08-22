@@ -23,10 +23,11 @@ def main():
     total_he = total_he[total_he["building_id"].isin(buildings["building_id"])]
     years = sorted(energy["date"].dt.year.unique())
 
-    st.session_state.city = st.selectbox(
+    st.selectbox(
         "City",
         list(CITY_VIEWS),
         index=list(CITY_VIEWS).index(st.session_state.city),
+        key="city",
     )
 
     st.session_state.basemap = "Mapbox — Streets v12"
@@ -64,17 +65,19 @@ def main():
     left, map_col = st.columns([1, 4])
 
     with left:
-        st.session_state.metric_label = st.radio(
+        st.radio(
             "Kolonnehøyde",
             ["Total energi", "kWh per student", "kWh per m²"],
             index=["Total energi", "kWh per student", "kWh per m²"].index(
                 st.session_state.metric_label
             ),
+            key="metric_label",
         )
-        st.session_state.year = st.radio(
+        st.radio(
             "År",
             years,
             index=years.index(st.session_state.year),
+            key="year",
         )
         month_names = [
             "Alle",
@@ -91,16 +94,18 @@ def main():
             "Nov",
             "Des",
         ]
-        st.session_state.month = st.radio(
+        st.radio(
             "Måned",
             list(range(13)),
             index=st.session_state.month,
             format_func=lambda i: month_names[i],
+            key="month",
         )
-        st.session_state.granularity = st.radio(
+        st.radio(
             "Month/Year",
             ["Month", "Year"],
             index=["Month", "Year"].index(st.session_state.granularity),
+            key="granularity",
         )
 
     metric_map = {
@@ -110,40 +115,43 @@ def main():
     }
 
     with map_col:
-        st.pydeck_chart(
-            build_energy_map(
-                gdf,
-                bdf,
-                city,
-                view,
-                st.session_state.basemap,
-                metric_map[st.session_state.metric_label],
-            ),
-            use_container_width=True,
-        )
-
-        legend_z = [2, 1, 0, -1, -2]
-        legend_labels = [
-            "> 1.5",
-            "0.5 to 1.5",
-            "-0.5 to 0.5",
-            "-1.5 to -0.5",
-            "< -1.5",
-        ]
-        legend_colors = [
-            "#%02x%02x%02x" % tuple(z_to_color(z)[:3]) for z in legend_z
-        ]
-        legend_df = pd.DataFrame({"label": legend_labels, "color": legend_colors})
-        legend_chart = (
-            alt.Chart(legend_df)
-            .mark_square(size=200)
-            .encode(
-                y=alt.Y("label:N", axis=alt.Axis(title="Robust z-score"), sort=None),
-                color=alt.Color("color:N", scale=None, legend=None),
+        if gdf.empty:
+            st.info("Ingen data tilgjengelig for valgte filtre.")
+        else:
+            st.pydeck_chart(
+                build_energy_map(
+                    gdf,
+                    bdf,
+                    city,
+                    view,
+                    st.session_state.basemap,
+                    metric_map[st.session_state.metric_label],
+                ),
+                use_container_width=True,
             )
-            .properties(width=100, height=100)
-        )
-        st.altair_chart(legend_chart, use_container_width=False)
+
+            legend_z = [2, 1, 0, -1, -2]
+            legend_labels = [
+                "> 1.5",
+                "0.5 to 1.5",
+                "-0.5 to 0.5",
+                "-1.5 to -0.5",
+                "< -1.5",
+            ]
+            legend_colors = [
+                "#%02x%02x%02x" % tuple(z_to_color(z)[:3]) for z in legend_z
+            ]
+            legend_df = pd.DataFrame({"label": legend_labels, "color": legend_colors})
+            legend_chart = (
+                alt.Chart(legend_df)
+                .mark_square(size=200)
+                .encode(
+                    y=alt.Y("label:N", axis=alt.Axis(title="Robust z-score"), sort=None),
+                    color=alt.Color("color:N", scale=None, legend=None),
+                )
+                .properties(width=100, height=100)
+            )
+            st.altair_chart(legend_chart, use_container_width=False)
 
     st.subheader(f"Tidsserie — {st.session_state.metric_label}")
     gdf_all = aggregate_data(edf_all.copy(), bdf, st.session_state.granularity)
@@ -182,6 +190,7 @@ def main():
         "Klimavariabel",
         ["temp_mean_c", "hdd_17c"],
         format_func=lambda v: "Temperatur (°C)" if v == "temp_mean_c" else "HDD₁₇ (graddager)",
+        key="climate_metric",
     )
     corr_df = (
         edf.groupby("date", as_index=False)
