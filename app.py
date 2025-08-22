@@ -22,14 +22,11 @@ def main():
     total_he = total_he[total_he["building_id"].isin(buildings["building_id"])]
     years = sorted(energy["date"].dt.year.unique())
 
-    with st.container():
-        c1, c2, c3 = st.columns([1, 1, 1])
-        if c1.button("Trondheim", use_container_width=True):
-            st.session_state.city = "Trondheim"
-        if c2.button("Gjøvik", use_container_width=True):
-            st.session_state.city = "Gjøvik"
-        if c3.button("Ålesund", use_container_width=True):
-            st.session_state.city = "Ålesund"
+    st.session_state.city = st.selectbox(
+        "City",
+        list(CITY_VIEWS),
+        index=list(CITY_VIEWS).index(st.session_state.city),
+    )
 
     st.session_state.basemap = "Mapbox — Streets v12"
 
